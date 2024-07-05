@@ -5,19 +5,12 @@ using UnityEngine;
 
 public class Cube : MonoBehaviour
 {
-    [SerializeField] private float _startScale = 10f;
-    [SerializeField] private int _minAmount = 2;
-    [SerializeField] private int _maxAmount = 6;
-    [SerializeField] private float _explodeForce = 100f;
-    [SerializeField] private float _explodeRadius = 100f;
-    [SerializeField] private Transform _transform;
-
-    private int _generation = 0;
-    private int _maxPercent = 100;
     private Renderer _renderer;
     private Rigidbody _rigidbody;
+    private float _maxPercent = 100;
+    private float _splitChance = 100;
 
-    private int SplitChance => Mathf.RoundToInt(_maxPercent / Mathf.Pow(2, _generation));
+    public float SplitChance => _splitChance;
 
     private void Awake()
     {
@@ -30,44 +23,23 @@ public class Cube : MonoBehaviour
         SetRandomColor();
     }
 
-    private void OnMouseOver()
-    {
-        if (Input.GetKeyDown(KeyCode.Z) && _transform != null)
-            AddExplosionForce(_explodeForce, _transform.position, _explodeRadius);
-    }
-
     public bool IsSplit()
     {
-        int randomNumber = Random.Range(0, _maxPercent);
+        float randomNumber = Random.Range(0, _maxPercent);
 
-        if (SplitChance >= randomNumber)
+        if (_splitChance >= randomNumber)
             return true;
 
         return false;
     }
 
-    public void SetGeneration(int generation) => _generation = generation;
+    public void SetScale(Vector3 scale) => transform.localScale = scale;
 
-    private Vector3 explosionPositionGizmo;
-    private float explosionRadiusGizmo;
+    public void SetSplitChance(float splitChance) => _splitChance = splitChance;
 
     public void AddExplosionForce
         (float explosionForce, Vector3 explosionPosition, float explosionRadius)
-    {
-        explosionRadiusGizmo = explosionRadius;
-        explosionPositionGizmo = explosionPosition;
-
-        _rigidbody.AddExplosionForce(explosionForce, explosionPosition, explosionRadius);
-        Debug.Log($"\nfrom {explosionPosition}\nto {transform.position}");
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (explosionRadiusGizmo != 0)
-        {
-            Gizmos.DrawWireSphere(explosionPositionGizmo, explosionRadiusGizmo);
-        }
-    }
+        => _rigidbody.AddExplosionForce(explosionForce, explosionPosition, explosionRadius);
 
     private void SetRandomColor() => _renderer.material.color = Random.ColorHSV();
 }
