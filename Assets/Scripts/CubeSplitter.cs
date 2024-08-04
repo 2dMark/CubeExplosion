@@ -1,59 +1,81 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Exploder))]
+
 public class CubeSplitter : MonoBehaviour
 {
     [SerializeField] private Cube _prefab;
     [SerializeField] private int _minAmount = 2;
     [SerializeField] private int _maxAmount = 6;
-    [SerializeField] private float _scaleDivider = 2f;
-    [SerializeField] private float _SplitChanceDivider = 2f;
-    [SerializeField] private float _explodeForce = 500f;
-    [SerializeField] private float _explodeRadius = 50f;
+    [SerializeField] private float _scaleDivisor = 2f;
+    [SerializeField] private float _splitChanceDivisor = 2f;
+    [SerializeField] private float ExplodeCoefficient = .1f;
 
+    private const float Angle = 360f;
+    private const float BasicExplodeCoefficient = 1f;
+
+    private Cube _newCube;
+    private Exploder _exploder;
+    private Collider[] _newCubes;
     private int _cubesAmount;
-    private float newCubeSplitChance;
-    private float _angle = 360f;
+    private float _newCubeSplitChance;
     private float _newCubesSpacing;
-    private float radius;
-    private Vector3 circularPosition;
-    private Vector3 newCubePosition;
-    private Vector3 explosionCenter;
-    private Vector3 newCubeScale;
-    private Cube newCube;
+    private float _radius;
+    private float _explodeForceDivisor;
+    private float _explodeRadiusDivisor;
+    private Vector3 _circularPosition;
+    private Vector3 _newCubePosition;
+    private Vector3 _explosionPosition;
+    private Vector3 _newCubeScale;
+
+    private void Awake()
+    {
+        _exploder = GetComponent<Exploder>();
+        _newCubesSpacing = Angle * Mathf.Deg2Rad;
+    }
 
     public void Split(Cube cube)
     {
+        _explosionPosition = cube.transform.position;
+
         if (cube.IsSplit() == false)
         {
             Destroy(cube.gameObject);
 
+            _explodeForceDivisor = cube.transform.localScale.x * ExplodeCoefficient;
+            _explodeRadiusDivisor = cube.transform.localScale.x * ExplodeCoefficient;
+
+            _exploder.ExplodeTargets
+                (_explodeForceDivisor, _explosionPosition, _explodeRadiusDivisor);
+
             return;
         }
 
-        explosionCenter = cube.transform.position;
-        newCubeScale = cube.transform.localScale / _scaleDivider;
-        newCubeSplitChance = cube.SplitChance / _SplitChanceDivider;
-        radius = cube.transform.localScale.x / _scaleDivider;
+        _newCubeScale = cube.transform.localScale / _scaleDivisor;
+        _newCubeSplitChance = cube.SplitChance / _splitChanceDivisor;
+        _radius = cube.transform.localScale.x / _scaleDivisor;
+        _cubesAmount = Random.Range(_minAmount, _maxAmount + 1);
+        _newCubes = new Collider[_cubesAmount];
 
         Destroy(cube.gameObject);
 
-        _cubesAmount = Random.Range(_minAmount, _maxAmount) + 1;
-        _newCubesSpacing = _angle * Mathf.Deg2Rad;
-
         for (int i = 1; i <= _cubesAmount; i++)
         {
-            circularPosition = new(
-                Mathf.Cos(_newCubesSpacing / _cubesAmount * i) * radius,
+            _circularPosition = new(
+                Mathf.Cos(_newCubesSpacing / _cubesAmount * i) * _radius,
                 0,
-                Mathf.Sin(_newCubesSpacing / _cubesAmount * i) * radius);
+                Mathf.Sin(_newCubesSpacing / _cubesAmount * i) * _radius);
 
-            newCubePosition = circularPosition + explosionCenter;
+            _newCubePosition = _circularPosition + _explosionPosition;
 
-            newCube = Instantiate(_prefab, newCubePosition, Quaternion.identity);
+            _newCube = Instantiate(_prefab, _newCubePosition, Quaternion.identity);
 
-            newCube.SetScale(newCubeScale);
-            newCube.SetSplitChance(newCubeSplitChance);
-            newCube.AddExplosionForce(_explodeForce, explosionCenter, _explodeRadius);
+            _newCube.SetScale(_newCubeScale);
+            _newCube.SetSplitChance(_newCubeSplitChance);
+            _newCubes[i - 1] = _newCube.Collider;
         }
+
+        _exploder.ExplodeTargets(BasicExplodeCoefficient, _explosionPosition,
+            BasicExplodeCoefficient, _newCubes);
     }
 }
